@@ -4,9 +4,14 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -31,3 +36,40 @@ jobs:
 
       - name: Build app
         run: ./gradlew :app:assembleDebug
+
+      - name: Archive APK for release workflow
+        run: |
+          mkdir -p ci-artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-debug.apk
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ether-poc-debug-apk
+          path: ci-artifacts/ether-poc-debug.apk
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ether-poc-debug-apk
+          path: ci-artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ci-artifacts/ether-poc-debug.apk

@@ -40,13 +40,16 @@ jobs:
       - name: Archive APK for release workflow
         run: |
           mkdir -p ci-artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-${{ github.sha }}-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-debug.apk
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk
+          fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: ether-poc-debug-apk
-          path: ci-artifacts/ether-poc-${{ github.sha }}-debug.apk
+          path: ci-artifacts/
           retention-days: 7
 
   release:
@@ -67,10 +70,16 @@ jobs:
           path: ci-artifacts
           merge-multiple: true
 
+      - name: Prepare release APK filename
+        run: |
+          if [ ! -f "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk" ]; then
+            cp ci-artifacts/ether-poc-debug.apk "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          files: ci-artifacts/ether-poc-${{ github.sha }}-debug.apk
+          files: ci-artifacts/ether-poc-${{ github.ref_name }}-debug.apk

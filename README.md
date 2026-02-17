@@ -52,6 +52,29 @@ echo "sdk.dir=/Users/본인계정/Library/Android/sdk" > local.properties
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### 4) 릴리스 버전 빌드(권장)
+```bash
+cd /Users/jihun/StudioProjects/Ether
+./gradlew :app:assembleRelease
+```
+
+릴리스 산출물: `app/build/outputs/apk/release/app-release.apk`  
+설치:
+```bash
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+## GitHub 릴리스 APK 설치(갤럭시)
+1) GitHub 리포지토리 `Releases`에서 `Ether` 버전(예: `v0.1.4`)의
+`ether-poc-v0.1.4-release.apk` 파일을 다운로드
+2) 갤럭시로 APK 복사 후 파일탐색기에서 탭
+3) 설치 전 아래 권한 설정  
+- `설정 > 앱 > 특별 접근 권한 > 알 수 없는 앱에서 설치`(또는 OS 버전에 따라 유사 항목)
+- 설치할 앱(예: 파일/브라우저)에서 `이 출처에서 앱 설치` 허용
+4) APK 실행 후 `설치`
+
+설치 후에는 APK 파일 삭제는 가능하며, 다음 버전 설치 시 기존 앱 위에 덮어쓰기 가능합니다.
+
 ## 설치 후 확인 체크리스트
 - 바텀 탭 전환(탐사/연대기/요약)이 정상 동작
 - 탐사에서 이벤트 생성 → 연대기에 반영

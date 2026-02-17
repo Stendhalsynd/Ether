@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build APKs
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -34,21 +34,30 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build app
-        run: ./gradlew :app:assembleDebug
+      - name: Build debug and release APKs
+        run: |
+          ./gradlew :app:assembleDebug :app:assembleRelease
 
       - name: Archive APK for release workflow
         run: |
           mkdir -p ci-artifacts
           cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-debug.apk
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk ci-artifacts/ether-poc-release.apk
+          fi
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             cp app/build/outputs/apk/debug/app-debug.apk ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk
+            if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+              cp app/build/outputs/apk/release/app-release.apk ci-artifacts/ether-poc-${GITHUB_REF_NAME}-release.apk
+            else
+              cp ci-artifacts/ether-poc-debug.apk ci-artifacts/ether-poc-${GITHUB_REF_NAME}-release.apk
+            fi
           fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: ether-poc-debug-apk
+          name: ether-poc-apks
           path: ci-artifacts/
           retention-days: 7
 
@@ -63,15 +72,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download debug APK
+      - name: Download APK artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ether-poc-debug-apk
+          name: ether-poc-apks
           path: ci-artifacts
           merge-multiple: true
 
       - name: Prepare release APK filename
         run: |
+          if [ -f "ci-artifacts/ether-poc-release.apk" ]; then
+            cp ci-artifacts/ether-poc-release.apk "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-release.apk"
+          elif [ -f "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-release.apk" ]; then
+            :
+          else
+            cp "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk" "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-release.apk"
+          fi
           if [ ! -f "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk" ]; then
             cp ci-artifacts/ether-poc-debug.apk "ci-artifacts/ether-poc-${GITHUB_REF_NAME}-debug.apk"
           fi
@@ -82,4 +98,5 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          files: ci-artifacts/ether-poc-${{ github.ref_name }}-debug.apk
+          files: |
+            ci-artifacts/ether-poc-${{ github.ref_name }}-release.apk
